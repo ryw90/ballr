@@ -1,0 +1,83 @@
+"""
+Scrape ESPN.com for shot chart information
+
+NOTE: I think this is a subset of all play-by-play information. How to get all of it?
+
+RW (11/13/2013)
+
+"""
+import dataset as dataset
+import re as re
+import requests as requests
+import sys as sys
+from bs4 import BeautifulSoup
+
+ESPN_NBA_SHOT_URL = 'http://sports.espn.go.com/nba/gamepackage/data/shot'
+ESPN_NBA_SCOREBOARD_URL = 'http://sports.espn.go.com/nba/scoreboard'
+
+def scrape_game_ids(date):
+	"""
+	Input:
+		date - of the form (YYYYMMDD)
+	Output:
+		A list of game IDs
+	"""
+	page = requests.get('%s?date=%s' % (ESPN_NBA_SCOREBOARD_URL,date))
+	game_pattern = re.compile('var thisGame = new gameObj\("(\d{7,12})".*\)')
+	return game_pattern.findall(page.text)
+
+def scrape_shots(espn_game_id):
+    '''
+    Components of the shot:
+    id 		--> composed of id_espn_game + 0 + [play-by-play ID]
+    pid     --> player ID    
+    qtr     --> quarter (what does OT look like??)
+    x       --> x-cord where shot was taken from
+    y       --> y-cord where shot was taken from    
+	t       --> values: a(way), h(ome)
+	made    --> true/false
+	p       --> player name
+	d       --> description e.g. "Made 19ft jumper 11:44 in 1st Qtr"
+	
+	Source: http://www.basketballgeek.com/data/    
+    How do I interpret the (x,y) shot location coordinates?:
+    If you are standing behind the offensive team's hoop then
+    the X axis runs from left to right and the Y axis runs from
+    bottom to top. The center of the hoop is located at (25, 5.25).
+    x=25 y=-2 and x=25 y=96 are free-throws (8ft jumpers)
+    '''
+    page = requests.get('%s?gameId=%s' % (ESPN_NBA_SHOT_URL, espn_game_id))
+    xml = BeautifulSoup(page.text)
+    return map(lambda x: x.attrs, xml.findAll('shot'))
+
+def parse_description(description):
+	"""
+	"""	
+	pattern = re.compile('(\w+) (\d+)ft (\w+) ([\d\:]+) in (\d)\w+ Qtr')
+	m = re.match(pattern, description)
+	if m is not None:
+		return dict(zip(['res','dist_ft','shot_type','gtime','per'], m.groups()))
+	else:
+		return dict()
+
+def update_table(db, espn_game_ids=[]):
+	for game_id in espn_game_ids:
+		shots = scrape_shots(game_id)
+		for shot in shots:
+			shot.update(parse_description(shot['d']))
+		db['ESPN_NBA_SHOT'].insert_many(shots)
+		print 'Inserted %s records into BBR_NBA_PLAYER!' % game_id
+
+if __name__=='__main__':
+	"""
+	For running from terminal...
+	Usage: python espn_shots.py "[date]" "[db_path]"
+	"""	
+	date, db_path = sys.argv[1:3] # The path is currently "../bball.db"
+	db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store the db_location in a CONFIG file
+	print db.tables
+	game_ids = scrape_game_ids(date) # TO DO: Set this up to run every day
+	for game_id in game_ids:
+		update_table(db_path, game_ids)
+		print 'Inserted games from %s into ESPN_NBA_SHOT!' % date
+
