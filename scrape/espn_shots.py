@@ -75,7 +75,7 @@ def update_table(db, game_ids):
             shot[u'game_id'] = game_id
             shot[u'shot_id'] = shot['id']
             del shot['id'] # Don't allow the shot dict to have a field called 'id'
-            table.insert(shot)
+            db['ESPN_NBA_SHOT'].insert(shot)
         print 'Inserted gameId=%s into ESPN_NBA_SHOT!' % game_id
 
 if __name__=='__main__':
