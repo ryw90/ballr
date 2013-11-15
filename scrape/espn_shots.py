@@ -10,21 +10,24 @@ import dataset as dataset
 import re as re
 import requests as requests
 import sys as sys
+from random import random
+from time import sleep
 from bs4 import BeautifulSoup
 
 ESPN_NBA_SHOT_URL = 'http://sports.espn.go.com/nba/gamepackage/data/shot'
 ESPN_NBA_SCOREBOARD_URL = 'http://sports.espn.go.com/nba/scoreboard'
+SLEEP_SECS = 2 # Average number of seconds to sleep between hitting of web page
 
 def scrape_game_ids(date):
-	"""
-	Input:
-		date - of the form (YYYYMMDD)
-	Output:
-		A list of game IDs
-	"""
-	page = requests.get('%s?date=%s' % (ESPN_NBA_SCOREBOARD_URL,date))
-	game_pattern = re.compile('var thisGame = new gameObj\("(\d{7,12})".*\)')
-	return game_pattern.findall(page.text)
+    """
+    Input:
+	date - of the form (YYYYMMDD)
+    Output:
+	A list of game IDs
+    """
+    page = requests.get('%s?date=%s' % (ESPN_NBA_SCOREBOARD_URL,date))
+    game_pattern = re.compile('var thisGame = new gameObj\("(\d{7,12})".*\)')
+    return game_pattern.findall(page.text)
 
 def scrape_shots(espn_game_id):
     '''
@@ -51,33 +54,42 @@ def scrape_shots(espn_game_id):
     return map(lambda x: x.attrs, xml.findAll('shot'))
 
 def parse_description(description):
-	"""
-	"""	
-	pattern = re.compile('(\w+) (\d+)ft (\w+) ([\d\:]+) in (\d)\w+ Qtr')
-	m = re.match(pattern, description)
-	if m is not None:
-		return dict(zip(['res','dist_ft','shot_type','gtime','per'], m.groups()))
-	else:
-		return dict()
+    """
+    Parse the shot descriptions e.g. Made 1ft jumper 11:40 in 1st Qtr
+    """	
+    pattern = re.compile('(\w+) (\d+)ft (\w+) ([\d\:]+) in (\d)\w+ Qtr')
+    m = re.match(pattern, description)
+    if m is not None:
+	return dict(zip([u'res',u'dist_ft',u'shot_type',u'gtime',u'per'], m.groups()))
+    else:
+	return dict()
 
-def update_table(db, espn_game_ids=[]):
-	for game_id in espn_game_ids:
-		shots = scrape_shots(game_id)
-		for shot in shots:
-			shot.update(parse_description(shot['d']))
-		db['ESPN_NBA_SHOT'].insert_many(shots)
-		print 'Inserted %s records into BBR_NBA_PLAYER!' % game_id
+def update_table(db, game_ids):
+    """
+    Update the ESPN_NBA_SHOT table
+    """
+    for game_id in game_ids:
+        shots = scrape_shots(game_id)
+        for shot in shots:
+            shot.update(parse_description(shot['d']))
+            shot[u'game_id'] = game_id
+            shot[u'shot_id'] = shot['id']
+            del shot['id'] # Don't allow the shot dict to have a field called 'id'
+            table.insert(shot)
+        print 'Inserted gameId=%s into ESPN_NBA_SHOT!' % game_id
 
 if __name__=='__main__':
-	"""
-	For running from terminal...
-	Usage: python espn_shots.py "[date]" "[db_path]"
-	"""	
-	date, db_path = sys.argv[1:3] # The path is currently "../bball.db"
-	db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store the db_location in a CONFIG file
-	print db.tables
-	game_ids = scrape_game_ids(date) # TO DO: Set this up to run every day
-	for game_id in game_ids:
-		update_table(db_path, game_ids)
-		print 'Inserted games from %s into ESPN_NBA_SHOT!' % date
+    """
+    For running from terminal...
+    Usage: python espn_shots.py "[date]" "[db_path]"
+    """	
+    date, db_path = sys.argv[1:3] # The path is currently "../bball.db"
+    db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store the db_location in a CONFIG file
+    print db.tables
+    game_ids = scrape_game_ids(date) # TO DO: Set this up to run every day
+    for game_id in game_ids:
+        update_table(db_path, game_ids)
+        
+
+    
 
