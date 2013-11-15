@@ -11,7 +11,7 @@ import re as re
 import requests as requests
 import sys as sys
 from random import random
-from time import sleep
+from time import sleep, gmtime, strftime
 from bs4 import BeautifulSoup
 
 ESPN_NBA_SHOT_URL = 'http://sports.espn.go.com/nba/gamepackage/data/shot'
@@ -76,7 +76,8 @@ def update_table(db, game_ids):
             shot[u'shot_id'] = shot['id']
             del shot['id'] # Don't allow the shot dict to have a field called 'id'
             db['ESPN_NBA_SHOT'].insert(shot)
-        print 'Inserted gameId=%s into ESPN_NBA_SHOT!' % game_id
+        print 'Inserted gameId=%s into ESPN_NBA_SHOT at %s!' % (game_id, strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime()))
+        sleep(random()*SLEEP_SECS)
 
 if __name__=='__main__':
     """
@@ -87,8 +88,9 @@ if __name__=='__main__':
     db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store the db_location in a CONFIG file
     print db.tables
     game_ids = scrape_game_ids(date) # TO DO: Set this up to run every day
-    for game_id in game_ids:
-        update_table(db_path, game_ids)
+    update_table(db, game_ids)
+    
+    # TO DO: Add logging capabilities
         
 
     
