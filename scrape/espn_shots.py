@@ -15,34 +15,22 @@ from time import sleep, gmtime, strftime
 from bs4 import BeautifulSoup
 
 ESPN_NBA_SHOT_URL = 'http://sports.espn.go.com/nba/gamepackage/data/shot'
-ESPN_NBA_SCOREBOARD_URL = 'http://sports.espn.go.com/nba/scoreboard'
 SLEEP_SECS = 2 # Average number of seconds to sleep between hitting of web page
-
-def scrape_game_ids(date):
-    """
-    Input:
-	date - of the form (YYYYMMDD)
-    Output:
-	A list of game IDs
-    """
-    page = requests.get('%s?date=%s' % (ESPN_NBA_SCOREBOARD_URL,date))
-    game_pattern = re.compile('var thisGame = new gameObj\("(\d{7,12})".*\)')
-    return game_pattern.findall(page.text)
 
 def scrape_shots(espn_game_id):
     '''
     Components of the shot:
-    id 		--> composed of id_espn_game + 0 + [play-by-play ID]
+    id 	    --> composed of id_espn_game + 0 + [play-by-play ID]
     pid     --> player ID    
     qtr     --> quarter (what does OT look like??)
     x       --> x-cord where shot was taken from
     y       --> y-cord where shot was taken from    
-	t       --> values: a(way), h(ome)
-	made    --> true/false
-	p       --> player name
-	d       --> description e.g. "Made 19ft jumper 11:44 in 1st Qtr"
+    t       --> values: a(way), h(ome)
+    made    --> true/false
+    p       --> player name
+    d       --> description e.g. "Made 19ft jumper 11:44 in 1st Qtr"
 	
-	Source: http://www.basketballgeek.com/data/    
+    Source: http://www.basketballgeek.com/data/    
     How do I interpret the (x,y) shot location coordinates?:
     If you are standing behind the offensive team's hoop then
     the X axis runs from left to right and the Y axis runs from
@@ -57,10 +45,10 @@ def parse_description(description):
     """
     Parse the shot descriptions e.g. Made 1ft jumper 11:40 in 1st Qtr
     """	
-    pattern = re.compile('(\w+) (\d+)ft (\w+) ([\d\:]+) in (\d)\w+ Qtr')
+    pattern = re.compile('(\w+) (\d+)ft ([\w\d\-]+) ([\d\:]+) in (\d)\w+ (\w+)')
     m = re.match(pattern, description)
     if m is not None:
-	return dict(zip([u'res',u'dist_ft',u'shot_type',u'gtime',u'per'], m.groups()))
+	return dict(zip([u'res',u'dist_ft',u'shot_type',u'gtime',u'per',u'per_type'], m.groups()))
     else:
 	return dict()
 
@@ -84,11 +72,11 @@ if __name__=='__main__':
     For running from terminal...
     Usage: python espn_shots.py "[date]" "[db_path]"
     """	
-    date, db_path = sys.argv[1:3] # The path is currently "../bball.db"
-    db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store the db_location in a CONFIG file
-    print db.tables
-    game_ids = scrape_game_ids(date) # TO DO: Set this up to run every day
-    update_table(db, game_ids)
+    #date, db_path = sys.argv[1:3] # The path is currently "../bball.db"
+    #db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store the db_location in a CONFIG file
+    #print db.tables
+    #game_ids = scrape_game_ids(date) # TO DO: Set this up to run every day
+    #update_table(db, game_ids)
     
     # TO DO: Add logging capabilities
         
