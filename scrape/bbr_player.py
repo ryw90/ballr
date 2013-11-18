@@ -1,8 +1,9 @@
 """
 Scrape basketball-reference.com (also sports-reference.com for college basketball) for player information
 
-RW (11/12/2013)
-
+TO DO:
+    - Just use sqlite3 instead of this dataset stuff, not worth the hassle
+    
 """
 
 from bs4 import BeautifulSoup
@@ -162,7 +163,7 @@ def update_table(db):
     nba_basic = scrape_nba_basic_all()
     nba_detailed = scrape_nba_detailed_many([plyr['bbr_id'] for plyr in nba_basic])
     nba_combined = combine_basic_detailed(nba_basic, nba_detailed)
-    db['BBR_NBA_PLAYER'].insert_many(nba_combined)
+    db['BBR_NBA_PLAYER'].insert_many(nba_combined) # TO DO: Switch to sqlite3 for more control
     print 'Inserted %d records into BBR_NBA_PLAYER!' % len(nba_combined)
     ### TO DO: NBDL players
     ### TO DO: CBB players

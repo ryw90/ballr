@@ -1,9 +1,9 @@
 """
 Scrape ESPN.com for shot chart information
 
-NOTE: I think this is a subset of all play-by-play information. How to get all of it?
-
-RW (11/13/2013)
+TO DO: 
+    - I think this is a subset of all play-by-play information. How to get all of it?
+    - Just use sqlite3 instead of this dataset stuff, not worth the hassle
 
 """
 import dataset as dataset
@@ -14,7 +14,9 @@ from random import random
 from time import sleep, gmtime, strftime
 from bs4 import BeautifulSoup
 
-ESPN_NBA_SHOT_URL = 'http://sports.espn.go.com/nba/gamepackage/data/shot'
+import espn_master
+
+ESPN_NBA_SHOT_URL = 'http://sports.espn.go.com/nba/gamepackage/data/shot?gameId='
 SLEEP_SECS = 2 # Average number of seconds to sleep between hitting of web page
 
 def scrape_shots(espn_game_id):
@@ -37,7 +39,7 @@ def scrape_shots(espn_game_id):
     bottom to top. The center of the hoop is located at (25, 5.25).
     x=25 y=-2 and x=25 y=96 are free-throws (8ft jumpers)
     '''
-    page = requests.get('%s?gameId=%s' % (ESPN_NBA_SHOT_URL, espn_game_id))
+    page = requests.get('%s%s' % (ESPN_NBA_SHOT_URL, espn_game_id))
     xml = BeautifulSoup(page.text)
     return map(lambda x: x.attrs, xml.findAll('shot'))
 
@@ -61,9 +63,9 @@ def update_table(db, game_ids):
         for shot in shots:
             shot.update(parse_description(shot['d']))
             shot[u'game_id'] = game_id
-            shot[u'shot_id'] = shot['id']
-            del shot['id'] # Don't allow the shot dict to have a field called 'id'
-            db['ESPN_NBA_SHOT'].insert(shot)
+            shot[u'shot_id'] = shot.pop('id') # Don't allow shot to have a field called 'id'
+            shot = {key : shot[key] for key in ['shot_id','game_id','pid','p','t','gtime','qtr','res','dist_ft','shot_type','x','y']}
+            db['ESPN_NBA_SHOT'].insert(shot) # TO DO: Switch to sqlite3 for more control
         print 'Inserted gameId=%s into ESPN_NBA_SHOT at %s!' % (game_id, strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime()))
         sleep(random()*SLEEP_SECS)
 
@@ -72,11 +74,10 @@ if __name__=='__main__':
     For running from terminal...
     Usage: python espn_shots.py "[date]" "[db_path]"
     """	
-    #date, db_path = sys.argv[1:3] # The path is currently "../bball.db"
-    #db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store the db_location in a CONFIG file
-    #print db.tables
-    #game_ids = scrape_game_ids(date) # TO DO: Set this up to run every day
-    #update_table(db, game_ids)
+    date, db_path = sys.argv[1:3] # The path is currently "../core-data.db"
+    db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store DB_PATH in a CONFIG file    
+    game_ids = espn_master.scrape_game_ids(date) # TO DO: Set this up to run every day
+    update_table(db, game_ids)
     
     # TO DO: Add logging capabilities
         
