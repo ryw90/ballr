@@ -21,6 +21,7 @@ import sqlite3
 BBR_NBA_URL = 'http://www.basketball-reference.com' ## TO DO: MOVE THESE INTO A CONFIG FILE 
 BBR_NBA_DETS = ['Twitter', 'Position', 'Shoots', 'Height', 'Weight', 'Born', 'High School', 'College', 'Draft', 'NBA Debut', 'Hall of Fame']
 BBR_NBA_DETS_HDRS = dict(zip(BBR_NBA_DETS, map(lambda x: string.lower(x.replace(' ','_') + '_dets'), BBR_NBA_DETS)))
+BBR_NBA_PLAYER_COLS = ['bbr_id','player','birth_date','birth_loc','height_in','weight_lbs','position','shoots','high_school','college','draft_year','draft_round','draft_team','draft_pick_overall','nba_debut']
 SLEEP_SEC = 2 # Average number of seconds to sleep between hitting of web page
 
 def scrape_nba_basic_all(sleep_secs=SLEEP_SEC):
@@ -138,22 +139,10 @@ def combine_basic_detailed(basic, detailed):
     combined = combined.join(tmp_hof)
     # Return parsed/non-redundant columns
     combined.rename(columns={'pos':'position','wt':'weight_lbs','high_school_dets':'high_school','nba_debut_dets':'nba_debut','shoots_dets':'shoots'}, inplace=True)
-    combined = combined[['bbr_id',
-                         'college',
-                         'player',
-                         'position',
-                         'shoots',
-                         'weight_lbs',
-                         'height_in',
-                         'birth_date',
-                         'birth_loc',
-                         'draft_team',
-                         'draft_round',
-                         'draft_pick_overall',
-                         'draft_year',
-                         'high_school',
-                         'nba_debut']]
-    return [dict(row) for idx, row in combined.iterrows()]
+    combined = combined[BBR_NBA_PLAYER_COLS]
+    # Scrub missing values to None
+    combined = combined.where(pd.notnull(combined), None)
+    return [list(row) for idx, row in combined.iterrows()]
 
 def update_table(db):
     """
@@ -166,8 +155,9 @@ def update_table(db):
     ### Start with NBA players
     nba_basic = scrape_nba_basic_all()
     nba_detailed = scrape_nba_detailed_many([plyr['bbr_id'] for plyr in nba_basic])
-    nba_combined = combine_basic_detailed(nba_basic, nba_detailed)
-    db['BBR_NBA_PLAYER'].insert_many(nba_combined) # TO DO: Switch to sqlite3 for more control
+    nba_combined = combine_basic_detailed(nba_basic, nba_detailed)    
+    db.executemany('INSERT INTO BBR_NBA_PLAYER VALUES ('+','.join(['?']*len(BBR_NBA_PLAYER_COLS))+')', nba_combined)
+    db.commit()
     print 'Inserted %d records into BBR_NBA_PLAYER!' % len(nba_combined)
     ### TO DO: NBDL players
     ### TO DO: CBB players
@@ -180,14 +170,5 @@ if __name__=='__main__':
     db_path = sys.argv[1] # The path is currently "../core-data.db"
     db = sqlite3.connect('db_path') # TO DO: Store DB_PATH in a CONFIG file    
     update_table(db)
-    db.close()
-    
-    
-        for shot in shots:
-            # Clean up identifiers and parse description
-            shot[u'game_id'] = game_id
-            shot[u'shot_id'] = shot['id']
-            shot = dict(shot, **parse_description(shot['d']))
-            shots2.append([shot[key] for key in ESPN_NBA_SHOT_COLS]) # TO DO: Link this to schema.sql        
-        db.executemany('INSERT INTO ESPN_NBA_SHOT VALUES ('+','.join(['?']*len(ESPN_NBA_SHOT_COLS))+')', shots2)    
+    db.close()            
     
