@@ -10,16 +10,20 @@ from bs4 import BeautifulSoup
 from time import sleep, gmtime, strftime
 from requests import get
 from random import random
+
 import re as re
 import string as string
 import pandas as pd
 
+import sys
+import sqlite3
+
 BBR_NBA_URL = 'http://www.basketball-reference.com' ## TO DO: MOVE THESE INTO A CONFIG FILE 
 BBR_NBA_DETS = ['Twitter', 'Position', 'Shoots', 'Height', 'Weight', 'Born', 'High School', 'College', 'Draft', 'NBA Debut', 'Hall of Fame']
 BBR_NBA_DETS_HDRS = dict(zip(BBR_NBA_DETS, map(lambda x: string.lower(x.replace(' ','_') + '_dets'), BBR_NBA_DETS)))
-SLEEP_SECS = 2 # Average number of seconds to sleep between hitting of web page
+SLEEP_SEC = 2 # Average number of seconds to sleep between hitting of web page
 
-def scrape_nba_basic_all(sleep_secs=SLEEP_SECS):
+def scrape_nba_basic_all(sleep_secs=SLEEP_SEC):
     """
     Scrape basic player information from alphabetical player lists e.g. name, position, height, weight, player_id (unique to basketball-reference)
     Input:
@@ -27,7 +31,7 @@ def scrape_nba_basic_all(sleep_secs=SLEEP_SECS):
     Output:
         Return a dictionary with information for each player
     """
-    print 'Expected runtime: %d minutes starting %s' % (round(len(string.ascii_lowercase)*SLEEP_SECS/60.), strftime("%d %b %Y %H:%M:%S +0000", gmtime()))
+    print 'Expected runtime: %d minutes starting %s' % (round(len(string.ascii_lowercase)*SLEEP_SEC/60.), strftime("%d %b %Y %H:%M:%S +0000", gmtime()))
     player_info_basic = list()   
     for letter in string.ascii_lowercase: 
         page = get('%s/players/%s' % (BBR_NBA_URL, letter))
@@ -41,7 +45,7 @@ def scrape_nba_basic_all(sleep_secs=SLEEP_SECS):
                                               extract_tag_text(tr, 'td') + [tr.find('a')['href']]) # player info
                                             ) for tr in player_table[1:]]
             player_info_basic += player_info_basic_tmp
-        sleep(random()*SLEEP_SECS)       
+        sleep(random()*SLEEP_SEC)       
     return player_info_basic   
 
 def scrape_nba_detailed_many(player_ids, log=True):
@@ -52,13 +56,13 @@ def scrape_nba_detailed_many(player_ids, log=True):
     Output:
         A list of player information dicts for each player
     """
-    print 'Expected runtime: %d minutes starting %s' % (round(len(player_ids)*SLEEP_SECS/60.), strftime("%d %b %Y %H:%M:%S +0000", gmtime()))
+    print 'Expected runtime: %d minutes starting %s' % (round(len(player_ids)*SLEEP_SEC/60.), strftime("%d %b %Y %H:%M:%S +0000", gmtime()))
     player_info_detailed = list()
     for player in player_ids:
         details = scrape_nba_detailed_one(player)
         details['bbr_id'] = player
         player_info_detailed.append(details)
-        sleep(random()*SLEEP_SECS)        
+        sleep(random()*SLEEP_SEC)        
         if log:
             print 'Scraped %s at %s' % (player, strftime("%d %b %Y %H:%M:%S +0000", gmtime()))        
     return player_info_detailed       
@@ -91,7 +95,7 @@ def extract_tag_text(html, tag):
 
 def parse_nba_draft_dets(string):
     """
-    TO DO
+    Use regex to parse a player's draft string
     """
     pattern = re.compile('([\w\s]+), (?:(\d+)\w+ round \((\d+)\w+ pick, (\d+)\w+ overall\), )?(\d+) NBA Draft')
     m = re.search(pattern, string)
@@ -100,7 +104,7 @@ def parse_nba_draft_dets(string):
 
 def parse_nba_hof_dets(string):
     """
-    TO DO
+    Use regex to parse a player's hall of fame string
     """
     hof_dets = dict()
     for substr in string.split('and'):
@@ -167,4 +171,23 @@ def update_table(db):
     print 'Inserted %d records into BBR_NBA_PLAYER!' % len(nba_combined)
     ### TO DO: NBDL players
     ### TO DO: CBB players
+    
+if __name__=='__main__':
+    """
+    For running from terminal...
+    Usage: python bbr_player.py "[db_path]"
+    """	
+    db_path = sys.argv[1] # The path is currently "../core-data.db"
+    db = sqlite3.connect('db_path') # TO DO: Store DB_PATH in a CONFIG file    
+    update_table(db)
+    db.close()
+    
+    
+        for shot in shots:
+            # Clean up identifiers and parse description
+            shot[u'game_id'] = game_id
+            shot[u'shot_id'] = shot['id']
+            shot = dict(shot, **parse_description(shot['d']))
+            shots2.append([shot[key] for key in ESPN_NBA_SHOT_COLS]) # TO DO: Link this to schema.sql        
+        db.executemany('INSERT INTO ESPN_NBA_SHOT VALUES ('+','.join(['?']*len(ESPN_NBA_SHOT_COLS))+')', shots2)    
     

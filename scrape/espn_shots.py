@@ -3,13 +3,12 @@ Scrape ESPN.com for shot chart information
 
 TO DO: 
     - I think this is a subset of all play-by-play information. How to get all of it?
-    - Just use sqlite3 instead of this dataset stuff, not worth the hassle
 
 """
-import dataset as dataset
 import re as re
 import requests as requests
 import sys as sys
+import sqlite3
 from random import random
 from time import sleep, gmtime, strftime
 from bs4 import BeautifulSoup
@@ -17,7 +16,11 @@ from bs4 import BeautifulSoup
 import espn_master
 
 ESPN_NBA_SHOT_URL = 'http://sports.espn.go.com/nba/gamepackage/data/shot?gameId='
-SLEEP_SECS = 2 # Average number of seconds to sleep between hitting of web page
+ESPN_NBA_SHOT_COLS = ['shot_id','game_id','pid','p','t','gtime','qtr','res','dist_ft','shot_type','x','y']
+ESPN_GAME_IDS = {'2010-2011': (301026002, 310413030),
+                 '2011-2012': (311225006, 320426030),
+                 '2012-2013': (400277721, 400440940)}
+SLEEP_SEC = 2 # Average number of seconds to sleep between hitting of web page
 
 def scrape_shots(espn_game_id):
     '''
@@ -60,14 +63,29 @@ def update_table(db, game_ids):
     """
     for game_id in game_ids:
         shots = scrape_shots(game_id)
+        shots2 = list()
         for shot in shots:
-            shot.update(parse_description(shot['d']))
+            # Clean up identifiers and parse description
             shot[u'game_id'] = game_id
-            shot[u'shot_id'] = shot.pop('id') # Don't allow shot to have a field called 'id'
-            shot = {key : shot[key] for key in ['shot_id','game_id','pid','p','t','gtime','qtr','res','dist_ft','shot_type','x','y']}
-            db['ESPN_NBA_SHOT'].insert(shot) # TO DO: Switch to sqlite3 for more control
+            shot[u'shot_id'] = shot['id']
+            shot = dict(shot, **parse_description(shot['d']))
+            shots2.append([shot[key] for key in ESPN_NBA_SHOT_COLS]) # TO DO: Link this to schema.sql        
+        db.executemany('INSERT INTO ESPN_NBA_SHOT VALUES ('+','.join(['?']*len(ESPN_NBA_SHOT_COLS))+')', shots2)
         print 'Inserted gameId=%s into ESPN_NBA_SHOT at %s!' % (game_id, strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime()))
-        sleep(random()*SLEEP_SECS)
+        sleep(random()*SLEEP_SEC)        
+        db.commit()
+        
+def clean_table(db):
+    """
+    Clean the raw ESPN_NBA_SHOT table based on quirks I have noticed from analysis
+    """
+    # 2010-2011 Season
+    # 2011-2012 Season
+    # These appear to be free-throws from cross-referencing with PBP
+    db.execute('update espn_nba_shot set shot_type = "free throw" where (y=-2 or y=96) and (game_id between ? and ?)', (ESPN_GAME_IDS['2011-2012'][0], ESPN_GAME_IDS['2011-2012'][1]))
+    # 2012-2013 Season
+    # These appear to be mislabeled lay-ups (and sometimes free throws) from cross-referencing with PBP
+    # game_id between ? and ?)', (ESPN_GAME_IDS['2011-2012'][0], ESPN_GAME_IDS['2011-2012'][1]))
 
 if __name__=='__main__':
     """
@@ -75,12 +93,10 @@ if __name__=='__main__':
     Usage: python espn_shots.py "[date]" "[db_path]"
     """	
     date, db_path = sys.argv[1:3] # The path is currently "../core-data.db"
-    db = dataset.connect('sqlite:///%s' % db_path) # TO DO: Store DB_PATH in a CONFIG file    
+    db = sqlite3.connect('db_path') # TO DO: Store DB_PATH in a CONFIG file    
     game_ids = espn_master.scrape_game_ids(date) # TO DO: Set this up to run every day
     update_table(db, game_ids)
+    db.close()
     
     # TO DO: Add logging capabilities
-        
-
     
-
