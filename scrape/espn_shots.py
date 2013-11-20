@@ -79,13 +79,15 @@ def clean_table(db):
     """
     Clean the raw ESPN_NBA_SHOT table based on quirks I have noticed from analysis
     """
-    # 2010-2011 Season
-    # 2011-2012 Season
     # These appear to be free-throws from cross-referencing with PBP
-    db.execute('update espn_nba_shot set shot_type = "free throw" where (y=-2 or y=96) and (game_id between ? and ?)', (ESPN_GAME_IDS['2011-2012'][0], ESPN_GAME_IDS['2011-2012'][1]))
-    # 2012-2013 Season
-    # These appear to be mislabeled lay-ups (and sometimes free throws) from cross-referencing with PBP
-    # game_id between ? and ?)', (ESPN_GAME_IDS['2011-2012'][0], ESPN_GAME_IDS['2011-2012'][1]))
+    db.execute('delete from espn_nba_shot where (y=-2 or y=96) and x=25')
+    # Top/bottom code based on court dimensions (94 ft by 50 ft)
+    db.execute('update espn_nba_shot set x = 0 where x<0')
+    db.execute('update espn_nba_shot set x = 50 where x>50')
+    db.execute('update espn_nba_shot set y = 0 where y<0')
+    db.execute('update espn_nba_shot set y = 50 where y>94')
+    # Remove free throws     
+    db.commit()
 
 if __name__=='__main__':
     """
@@ -96,6 +98,7 @@ if __name__=='__main__':
     db = sqlite3.connect('db_path') # TO DO: Store DB_PATH in a CONFIG file    
     game_ids = espn_master.scrape_game_ids(date) # TO DO: Set this up to run every day
     update_table(db, game_ids)
+    clean_table(db)
     db.close()
     
     # TO DO: Add logging capabilities
