@@ -31,3 +31,18 @@ CREATE TABLE ESPN_NBA_SHOT (
     y INTEGER
 );
 
+CREATE TABLE ESPN_NBA_BOX_OV (
+    game_id INTEGER PRIMARY KEY NOT NULL,
+    away_team TEXT,
+    away_score INTEGER,
+    home_team TEXT,
+    home_score INTEGER,
+    game_time_et TEXT,
+    game_date TEXT,
+    arena TEXT,
+    coverage TEXT,
+    officials TEXT,
+    attendance INTEGER,
+    duration INTEGER,
+);
+
