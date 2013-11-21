@@ -18,11 +18,13 @@ ESPN_NBA_BOX_COLS = ['shot_id','game_id','pid','p','t','gtime','qtr','res','dist
 ESPN_GAME_IDS = {'2010-2011': (301026002, 310413030),
                  '2011-2012': (311225006, 320426030),
                  '2012-2013': (400277721, 400440940)}
-SLEEP_SEC = 2 # Average number of seconds to sleep between hitting of web page
+SLEEP_SEC = 1 # Average number of seconds to sleep between hitting of web page
 
 def scrape_box_ov(game_id):
     """
     Scrape game overview from box score e.g. date, coverage, attendance
+    TO DO: 
+        - FIX ISSUE WITH LENGTH (SHOULD BE 12, SOMETIMES 15)
     """
     url = '%s%s' % (ESPN_NBA_BOX_URL, game_id)        
     page = requests.get(url)
@@ -49,24 +51,40 @@ def scrape_box_ov(game_id):
 
         # Post-game details
         try:
+            tmp = list()
             for key in ['Officials', 'Attendance', 'Time of Game']:
                 m = re.search(r'%s:\s*</strong>\s*([\w\,\:\s]+)\s*<br>' % key, page.text)
                 if m is not None:
-                    box_ov.append(m.group(1))
+                    tmp.append(m.group(1))
                 else:
-                    box_ov.append(None)
+                    tmp.append(None)
+            box_ov.extend(tmp)
             box_ov[9] = box_ov[9].replace(',','') # Scrub attendance
         except:
-            box_ov.extend([None, None, None])
-                 
+            box_ov.extend([None, None, None])       
         return box_ov
 
 def scrape_box(game_id):
     """
     Scrape stats from box score e.g. date, coverage, attendance
-    - TO DO
     """
-    pass
+    plyr_string = re.compile(r'player')
+    url = '%s%s' % (ESPN_NBA_BOX_URL, game_id)        
+    page = requests.get(url)
+    if page.url == url:
+        soup = BeautifulSoup(page.text)
+        box_lines = soup.findAll('tr', class_=plyr_string)
+        box = list()
+        for line in box_lines:
+            pid = line.find('a')['href'].split('/')[7] # Heavily hard-coded
+            stats = [s.text for s in line.findAll('td')]
+            if stats != []:
+                plyr, pos = [s.strip() for s in stats[0].split(',')]
+                if 'DNP' in stats[1]:
+                    box.append([pid, plyr, pos] + [None]*14)
+                else:
+                    box.append([pid, plyr,pos] + stats[1:])
+        return box                  
 
 def update_table(db, game_ids):
     """
@@ -74,12 +92,22 @@ def update_table(db, game_ids):
     """
     box_ov = list()
     for game_id in game_ids:
-        # box.append([game_id] + scrape_box(game_id))
         box_ov.append([game_id] + scrape_box_ov(game_id))
         print 'JUST SCRAPED BOX FOR %s at %s' % (game_id, strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime()))
-        sleep(random())
+        sleep(random()*SLEEP_SEC)
     db.executemany('INSERT INTO ESPN_NBA_BOX_OV VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', box_ov)
-    print 'INSERTED %d RECORDS INTO ESPN_NBA_BOX_OV' % len(box_ov)    
+    db.commit()
+    print 'INSERTED %d RECORDS INTO ESPN_NBA_BOX_OV' % len(box_ov)
+
+    # TO DO: RUN FROM HERE TO BOTTOM    
+    for game_id in game_ids:
+        box = map(lambda l: [game_id] + l, scrape_box(game_id))
+        db.executemany('INSERT INTO ESPN_NBA_BOX VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', box)
+        db.commit()
+        print 'INSERTED %d RECORDS INTO ESPN_NBA_BOX_OV' % len(box)
+        sleep(random()*SLEEP_SEC)
+
+# game_ids = game_ids_2008to2009 + game_ids_2009to2010 + game_ids_2010to2011 + game_ids_2011to2012 + game_ids_2012to2013
 
 if __name__=='__main__':
     """

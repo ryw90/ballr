@@ -31,6 +31,27 @@ CREATE TABLE ESPN_NBA_SHOT (
     y INTEGER
 );
 
+CREATE TABLE ESPN_NBA_BOX (
+    game_id INTEGER NOT NULL,
+    player TEXT NOT NULL,
+    pos TEXT,
+    min INTEGER,
+    fgm_a TEXT,
+    tpm_a TEXT,
+    ftm_a TEXT,
+    oreb INTEGER,
+    dreb INTEGER,
+    reb INTEGER,
+    ast INTEGER,
+    stl INTEGER,
+    blk INTEGER,
+    tos INTEGER,
+    pfs INTEGER,
+    plus_minus TEXT,
+    pts INTEGER,
+    PRIMARY KEY (game_id, player)
+);
+
 CREATE TABLE ESPN_NBA_BOX_OV (
     game_id INTEGER PRIMARY KEY NOT NULL,
     away_team TEXT,
@@ -43,6 +64,13 @@ CREATE TABLE ESPN_NBA_BOX_OV (
     coverage TEXT,
     officials TEXT,
     attendance INTEGER,
-    duration INTEGER,
+    duration INTEGER
+);
+
+CREATE TABLE GAME_IDS (
+    espn_game_id INTEGER PRIMARY KEY NOT NULL, 
+    nba_game_id TEXT,
+    season TEXT,
+    season_type INTEGER
 );
 
