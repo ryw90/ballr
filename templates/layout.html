@@ -1,15 +1,16 @@
 <!doctype html>
+<html>
 <title>Ballr</title>
 <link rel=stylesheet type=text/css href="{{ url_for('static', filename='pure-min.css') }}">
 <link rel=stylesheet type=text/css href="{{ url_for('static', filename='ballr.css') }}">
 <div class=page>
     <div class="header">
         <div class="pure-menu pure-menu-open pure-menu-fixed pure-menu-horizontal">
-            <a href="/" class="pure-menu-heading">Ballr</a>
+            <a href="#" class="pure-menu-heading">Ballr</a>
             <ul>
-                <li><a href="#">Players</a></li>
-                <li><a href="#">Teams</a></li>
-                <li><a href="#">About</a></li>
+                <li><a href="{{ url_for('stats') }}">Stats</a></li>
+                <li><a href="{{ url_for('charts') }}">Charts</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
             </ul>
         </div>        
     </div>
@@ -21,3 +22,4 @@
         {% block body %}{% endblock %}
     </div>
 </div>
+</html>

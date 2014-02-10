@@ -14,49 +14,14 @@ import numpy as np
 import scipy.interpolate
 import matplotlib.patches
 
-BASE64_HTML_IMG = '''
-    <html>
-        <body>
-            <img src="data:image/png;base64,{}" />
-        </body>
-    </html>
-    ''' 
+XMIN = 1
+XMAX = 50
+YMIN = 1
+YMAX = 48
 
-def shot_chart_matplotlib(made_x, made_y, miss_x, miss_y):
-    # Need to correct for native coordinate system
+def gen_court():
     fig = plt.figure()
-    plt.scatter(miss_y, map(lambda x: 51-x, miss_x), marker='x')
-    plt.scatter(made_y, map(lambda x: 51-x, made_x), marker='o')
-    plt.xlim(0,96)   
     
-    # Encode image to png in base64
-    # Source: http://pythonwise.blogspot.com/2013/04/serving-dynamic-images-with-matplotlib.html
-    io = StringIO()
-    fig.savefig(io, format='png')
-    data = io.getvalue().encode('base64')
-    return BASE64_HTML_IMG.format(data)
-
-def shot_freq_map_matplotlib(x, y, freq, label=False):
-    x, y, z = map(np.array, [x, y, freq])
-    res = 250
-    
-    X_MIN = 0
-    X_MAX = 50
-    Y_MIN = 0
-    Y_MAX = 48
-    
-    # Increase resolution
-    xi, yi = np.linspace(x.min(), x.max(), res), np.linspace(y.min(), y.max(), res)
-    xi, yi = np.meshgrid(xi, yi)
-    
-    # Use radial basis functions to do interpolation
-    rbf = scipy.interpolate.Rbf(x, y, z, function='linear')
-    zi = rbf(xi, yi)
-    
-    # Plot freq map
-    fig = plt.figure()
-    plt.imshow(zi, extent=[x.min(), x.max(), y.min(), y.max()], origin='lower', vmin=z.min(), vmax=z.max(), cmap=plt.cm.get_cmap('Reds'))
-
     # Add 3 Point Line
     plt.plot([47, 47], [0, 14], 'k-')
     plt.plot([3, 3], [0, 14], 'k-')
@@ -69,8 +34,44 @@ def shot_freq_map_matplotlib(x, y, freq, label=False):
     plt.axes().add_patch(plt.Circle(xy=(25,19), radius=6, fill=False))
     
     # Set axes
-    plt.xlim(0,50)
-    plt.ylim(1,48)
+    plt.xlim(XMIN, XMAX)
+    plt.ylim(YMIN, YMAX)
+    
+    return fig
+
+def heat_map_hist(x, y, freq):
+    '''
+    TODO: Figure out what's going on with coordinates
+    x, y, z = map(np.array, [x, y, freq])
+    H, xedges, yedges = np.histogram2d(x=x, y=y, weights=freq, bins=15)
+    
+    fig = gen_court()
+    plt.imshow(H, cmap=plt.cm.get_cmap('Oranges'), extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
+    plt.colorbar()
+    '''
+    pass
+    
+def heat_map_rbf(x, y, freq, label=False):
+    x, y, z = map(np.array, [x, y, freq])
+    
+    # TO DO: Include options for lower-resolution grid
+    # agg = 3.0
+    # x_g3 = np.ceil(shots.x/agg)*agg-agg/2
+    # y_g3 = np.ceil(shots.y/agg)*agg-agg/2
+    # z_g3 = ...
+    
+    # Create grid
+    res = 100
+    xi, yi = np.linspace(XMIN, XMAX, res), np.linspace(YMIN, YMAX, res)
+    xi, yi = np.meshgrid(xi, yi)
+    
+    # Use radial basis functions to do interpolation
+    rbf = scipy.interpolate.Rbf(x, y, z, function='linear')
+    zi = rbf(xi, yi)
+    
+    # Plot freq map
+    fig = gen_court()
+    plt.imshow(zi, extent=[xi.min(), xi.max(), yi.min(), yi.max()], origin='lower', vmin=z.min(), vmax=z.max(), cmap=plt.cm.get_cmap('YlGn'))
     plt.colorbar()
     
     if label:
@@ -78,10 +79,8 @@ def shot_freq_map_matplotlib(x, y, freq, label=False):
             plt.annotate('{}'.format(Z), xy=(X,Y))
     
     # Encode image to png in base64
-    # Source: http://pythonwise.blogspot.com/2013/04/serving-dynamic-images-with-matplotlib.html
+    # Source: http://pythonwise.blogspot.com/2013/04/serving-dynamic-images-with-matplotlib.html    
     io = StringIO()
-    fig.savefig(io, format='png')
-    data = io.getvalue().encode('base64')
-    return BASE64_HTML_IMG.format(data)
-    
+    fig.savefig(io, format='png')    
+    return io.getvalue().encode('base64')
     

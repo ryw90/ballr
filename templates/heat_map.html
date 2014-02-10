@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block body %}
+
+	<h2>Heat Map: {{ pname }}</h2>
+	<p>
+		Technical note: This heat map is created using a linear interpolation of log shot frequencies. It reflects only shot location, and not makes/misses. Inspired by Kirk Goldsberry's <a href="http://grantland.com/grantland_bio/kirk-goldsberry/">CourtVision</a>.
+
+		<img src="data:image/png;base64,{{ img.base64 }}"></img>
+	</p>
+
+{% endblock %}

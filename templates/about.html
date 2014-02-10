@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block body %}
+	<h2>About Ballr</h2>
+	<p>
+		Ballr collects and analyzes basketball data. It is built with Python's Flask package and named after the introductory Flaskr app. Here are some things to check out (although Ballr is still under construction):
+		<ul>
+			<li><a href="{{ url_for('charts') }}">Shot charts</a></li>
+			<li><a href="{{ url_for('stats') }}">Per-game statistics</a></li>
+			<li><a href="https://github.com/ryw90/ballr">Source code</a></li>
+		</ul>
+	</p>
+{% endblock %}

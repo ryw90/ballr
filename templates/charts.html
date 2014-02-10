@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block body %}
+
+	<h2>Shot Charts: 2012-2013 Regular Season</h2>
+	<p>
+		Heat maps indicate a player's shot location tendencies. They are based on the (x,y) coordinates of each shot taken during the season. Inspired by Kirk Goldsberry's <a href="http://grantland.com/grantland_bio/kirk-goldsberry/">CourtVision</a>.
+	</p>
+
+  <div id="player-list" align="center">
+    <table class="pure-table pure-table-striped">
+      <thead>
+		    <tr>
+	  		  <th>Player</th>
+	  		  <th>Games Played</th>
+	  		  <!-- TODO: <th>Shots Attempted</th> -->
+	   		  <th></th>		  	
+		    </tr>
+	  	</thead>
+		  <tbody>
+		  {% for player in players %}
+		    <tr>
+		      <td>{{ player.player }}</td>
+		      <td>{{ player.gp }}</td>
+		      <!-- TODO: <td>{{ player.fga }}</td> -->
+			  	<td><a href="/heat_map/{{ player.pid }}">Heat Map</a></td>
+		    </tr>
+		  {% endfor %}
+		  </tbody>
+    </table>
+  <div>
+{% endblock %}
